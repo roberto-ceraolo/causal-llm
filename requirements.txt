@@ -1,0 +1,15 @@
+# Core dependencies
+numpy
+pandas
+scipy
+
+# Causal inference libraries
+dowhy
+causallearn
+
+# Graph libraries
+networkx
+
+# API and data handling
+openai
+python-dotenv
