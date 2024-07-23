@@ -3,6 +3,7 @@
 import networkx as nx
 from typing import List, Dict
 import pydot
+import matplotlib.pyplot as plt
 
 def is_dag(graph: List[List[str]]) -> bool:
     """
@@ -60,3 +61,37 @@ def create_gml_graph(causal_graph: List[List[str]]) -> str:
     for edge in causal_graph:
         G.add_edge(edge[0], edge[1])
     return "".join(nx.generate_gml(G))
+
+def save_causal_graph_png(causal_graph: List[List[str]], filename: str = "causal_graph.png") -> None:
+    """
+    Create and save a PNG image of the causal graph.
+
+    Args:
+    causal_graph (List[List[str]]): A list of edges in the causal graph.
+    filename (str): The filename to save the PNG image (default: "causal_graph.png").
+
+    Returns:
+    None
+    """
+    G = nx.DiGraph()
+    for edge in causal_graph:
+        G.add_edge(edge[0], edge[1])
+
+    plt.figure(figsize=(12, 8))
+    pos = nx.spring_layout(G)
+    nx.draw(G, pos, with_labels=True, node_color='lightblue', 
+            node_size=3000, font_size=10, font_weight='bold', 
+            arrows=True, edge_color='gray')
+
+    # Add edge labels
+    edge_labels = {(edge[0], edge[1]): "" for edge in causal_graph}
+    nx.draw_networkx_edge_labels(G, pos, edge_labels=edge_labels, font_size=8)
+
+    plt.title("Causal Graph", fontsize=16)
+    plt.axis('off')
+    plt.tight_layout()
+
+    plt.savefig(filename, format='png', dpi=300, bbox_inches='tight')
+    plt.close()
+
+    print(f"Causal graph saved as {filename}")

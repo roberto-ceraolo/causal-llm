@@ -4,10 +4,11 @@ from dowhy import CausalModel
 import pandas as pd
 from typing import Dict, Any
 from llm import generate_initial_dag, parse_llm_dag_output, refine_dag, refine_dag_pc
-from graph_utils import is_dag, create_gml_graph
-from causal_discovery import get_pc_graph
+from graph_utils import is_dag, create_gml_graph, save_causal_graph_png
+from causal_utils import choose_causal_inference_method, estimate_causal_effect_gcm, get_pc_graph
 from data_generation import generate_random_dataset
 from config import SYNTHETIC_DATA
+import networkx as nx
 
 def causal_effect_solver(question: str, data: pd.DataFrame = None) -> Dict[str, str]:
     """
@@ -68,6 +69,8 @@ def causal_effect_solver(question: str, data: pd.DataFrame = None) -> Dict[str, 
             print("Error: The refined graph based on PC graph contains a cycle. Using the graph refined only using reasoning.")
             print("Cycle: ", cycle)
             
+    # Save the final causal graph as a PNG
+    save_causal_graph_png(refined_graph, "final_causal_graph.png")
 
     # Create GML graph for py-why
     gml_graph = create_gml_graph(refined_graph)
@@ -79,20 +82,39 @@ def causal_effect_solver(question: str, data: pd.DataFrame = None) -> Dict[str, 
         outcome=outcome,
         graph=gml_graph)
 
+        # Convert GML graph to NetworkX DiGraph
+    G = nx.parse_gml(gml_graph)
+
     # Identify causal effect
     print("Identifying causal effect...")
     identified_estimand = model.identify_effect()
     print("Identified estimand:", identified_estimand)
 
+    # Choose causal inference method
+    method, info = choose_causal_inference_method(data, G, treatment, outcome)
+    print(f"Chosen estimation method: {method}")
+    print(f"Reason: {info['reason']}")
+
     # Estimate the causal effect
     print("Estimating causal effect...")
-    estimate = model.estimate_effect(identified_estimand,
-                                     method_name="backdoor.propensity_score_matching")
-    print("Causal effect estimate:", estimate)
+    if method == "gcm":
+        estimate_result = estimate_causal_effect_gcm(data, G, treatment, outcome)
+    else:
+        estimate = model.estimate_effect(identified_estimand, method_name=method)
+        estimate_result = {
+            "method": method,
+            "causal_estimate": str(estimate)
+        }
+
+    print("Causal effect estimate:", estimate_result)
+
 
     return {
         "initial_dag": initial_dag,
         "refined_dag": refined_graph,
         "identified_estimand": str(identified_estimand),
-        "causal_estimate": str(estimate)
+        "estimation_method": method,
+        "estimation_reason": info['reason'],
+        "causal_estimate": estimate_result,
+        "causal_graph_image": "final_causal_graph.png"
     }
