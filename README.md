@@ -1,67 +1,67 @@
-# Causal Solver
+# Causal Inference for Career Decisions
 
-This project implements a causal inference framework to answer causal questions. It uses a combination of expert knowledge, causal discovery algorithms, and causal inference techniques to provide insights.
+This project implements a causal inference framework to analyze the impact of educational and career choices on long-term career prospects. It uses a combination of expert knowledge and data-driven approaches to generate and refine causal graphs, which can help individuals make informed decisions about their career paths.
 
 ## Features
 
-- Generation and refinement of causal graphs based on expert knowledge
-- Integration with PC algorithm for data-driven causal discovery
-- Synthetic data generation for testing and demonstration
-- Causal effect estimation using DoWhy library
-- Caching of LLM responses for efficiency
+1. Generation of initial causal graphs based on user questions
+2. Refinement of causal graphs using expert knowledge and data-driven insights
+3. Integration with OpenAI's GPT models for natural language processing
+4. Caching system for efficient response retrieval
+5. Synthetic data generation for testing and development
+6. Kaggle dataset integration for real-world data analysis
 
-## Project Structure
+## Installation
 
-```
-.
-├── config.py
-├── utils.py
-├── llm.py
-├── graph_utils.py
-├── causal_discovery.py
-├── data_generation.py
-├── causal_inference.py
-├── main.py
-├── requirements.txt
-└── README.md
-```
-
-## Setup
-
-1. Clone the repository:
-   ```
-   git clone https://github.com/roberto-ceraolo/causal-llm.git
-   cd causal-llm
-   ```
-
-2. Create a virtual environment and activate it:
-   ```
-   python -m venv venv
-   source venv/bin/activate  # On Windows, use `venv\Scripts\activate`
-   ```
-
-3. Install the required dependencies:
+1. Clone the repository
+2. Install the required dependencies:
    ```
    pip install -r requirements.txt
    ```
-
-4. Set up environment variables:
-   Create a `.env` file in the project root and add your OpenAI API key:
+3. Set up your OpenAI API key in a `.env` file:
    ```
    OPENAI_API_KEY=your_api_key_here
    ```
+4. Set up your Kaggle API credentials (optional, for Kaggle dataset functionality)
 
 ## Usage
 
-To run the causal inference analysis:
+The main functionality is implemented in the `src/causal_engine.py` file. Key functions include:
 
-```python
-python main.py
-```
+- `generate_initial_dag`: Generates an initial causal graph based on a user question
+- `refine_dag`: Refines the causal graph by considering additional factors
+- `refine_dag_pc`: Further refines the graph using insights from the PC algorithm
+- `interpret_causal_effect`: Interprets the causal effect estimates
 
-This will execute the causal effect solver for a predefined question. To analyze a different question, modify the `question` variable in `main.py`.
+
+
+
+
+## Kaggle Integration
+
+The project includes functionality to search for and use relevant datasets from Kaggle:
+
+- `find_and_prepare_kaggle_dataset`: Searches for a relevant Kaggle dataset based on the causal question and prepares it for analysis
+- `build_and_save_embeddings`: Builds and saves embeddings for Kaggle datasets to improve search efficiency
+- `load_embeddings`: Loads pre-computed embeddings for Kaggle datasets
+
+To use Kaggle functionality, ensure you have set up your Kaggle API credentials and set `KAGGLE = True` in the configuration.
+
+## Configuration
+
+The project configuration is stored in `src/config.py`. You can modify settings such as:
+
+- `CACHE_FILE`: Location of the cache file for LLM responses
+- `MODEL`: The GPT model to use
+- `SYNTHETIC_DATA`: Whether to use synthetic data generation
+- `DEBUG`: Enable or disable debug mode
+- `KAGGLE`: Enable or disable Kaggle dataset functionality
 
 ## Contributing
 
-Contributions are welcome! Please feel free to submit a Pull Request.
+Contributions to this project are welcome. Please ensure that you follow the existing code style and add appropriate tests for new features.
 
+
+## Acknowledgements
+
+This project uses OpenAI's GPT models for natural language processing and causal inference tasks, as well as the Kaggle API for dataset retrieval.
