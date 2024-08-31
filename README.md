@@ -1,6 +1,6 @@
-# Causal Inference for Career Decisions
+# Causal Inference for Natural Causal Questions
 
-This project implements a causal inference framework to analyze the impact of educational and career choices on long-term career prospects. It uses a combination of expert knowledge and data-driven approaches to generate and refine causal graphs, which can help individuals make informed decisions about their career paths.
+This project implements a tool-augmented AI agent that can answer natural causal questions. It uses a combination of causal inference techniques, LLM, and tools to answer questions. It can provide support in decision making, in scientific research, and in policy making.
 
 ## Features
 
