@@ -1,12 +1,24 @@
 # llm.py
 
 import json
+import re
 from openai import OpenAI
 from typing import Dict, Any, List
 from config import MODEL
 from utils import get_cached_response, cache_response
 
 client = OpenAI()
+
+
+def get_embedding(text: str) -> List[float]:
+    """
+    Get the embedding for the given text.
+    """
+    response = client.embeddings.create(
+        input=text,
+        model="text-embedding-3-small"
+    )
+    return response.data[0].embedding
 
 def get_gpt_response(prompt: str, model: str = MODEL, system_prompt: str = None, response_format: Dict[str, Any] = None) -> str:
     """
@@ -221,3 +233,18 @@ def refine_dag(question: str, initial_dag: Dict[str, Any]) -> str:
     system_prompt = "You are a causal inference expert tasked with refining and improving causal graphs for career decisions. Provide your output as a valid JSON object. Do not include any other character except the JSON object. Don't include the markdown syntax anywhere."
     response_format = {"type": "json_object"}
     return get_gpt_response(prompt, system_prompt=system_prompt, response_format=response_format)
+
+
+def interpret_causal_effect(question: str, treatment_variable: str, outcome_variable: str, causal_estimate: float) -> str:
+    prompt = f"""
+    Given the following question about causal effects:
+    "{question}"
+
+    And given that we estimated the causal effect of {treatment_variable} on {outcome_variable} to be {causal_estimate}, please interpret these results in plain language, explaining what they mean in the context of the original question.
+
+    Answer the question in the best way possible, considering the finding of the estimate but also your reasoning and knowledge about the problem.
+    """
+
+    system_prompt = "You are an expert in causal inference tasked with interpreting complex causal effects for a general audience. Provide clear, concise explanations that relate directly to the original question. You want to be as helpful as possible, leveraging your reasoning capbitilies, together with the provided estimate."
+    
+    return get_gpt_response(prompt, system_prompt=system_prompt)

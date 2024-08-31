@@ -9,6 +9,9 @@ import networkx as nx
 import numpy as np
 from typing import Dict, Any, Tuple
 import dowhy.gcm as gcm
+from config import DEBUG
+
+from llm import get_gpt_response, parse_llm_dag_output
 
 
 def get_pc_graph(df: pd.DataFrame) -> List[List[str]]:
@@ -37,62 +40,60 @@ def get_pc_graph(df: pd.DataFrame) -> List[List[str]]:
 
     return edges_mapped
 
-def choose_causal_inference_method(data: pd.DataFrame, graph: nx.DiGraph, treatment: str, outcome: str) -> Tuple[str, Dict[str, Any]]:
+def choose_causal_inference_method(data: pd.DataFrame, graph: nx.DiGraph, treatment: str, outcome: str, question: str) -> Tuple[str, Dict[str, Any]]:
     """
-    Choose the most appropriate causal inference method based on data and graph characteristics.
+    Choose the most appropriate causal inference method based on data, graph characteristics, and domain-specific considerations.
 
     Args:
     data (pd.DataFrame): The dataset containing treatment, outcome, and covariates.
     graph (nx.DiGraph): The causal graph as a NetworkX DiGraph object.
     treatment (str): The name of the treatment variable.
     outcome (str): The name of the outcome variable.
+    question (str): The original causal question.
 
     Returns:
     Tuple[str, Dict[str, Any]]: A tuple containing the chosen method and a dictionary of additional information.
     """
-    # Extract relevant information
-    n_samples, n_features = data.shape
-    n_edges = len(graph.edges())
-    treatment_values = data[treatment].unique()
+
+    if DEBUG: 
+        return "gcm", {"reason": "Graphical Model framework is chosen"}
     
-    # Check data characteristics
-    is_binary_treatment = len(treatment_values) == 2
-    is_multi_valued_treatment = len(treatment_values) > 2
-    is_continuous_treatment = data[treatment].dtype in ['float64', 'float32']
-    is_continuous_outcome = data[outcome].dtype in ['float64', 'float32']
+    else:
+
+
+        # Ask GPT about the appropriate framework
+        prompt = f"""Considering the commonly used methods in the domain of the following question: '{question}', 
+        is it more appropriate to choose the Graphical Model framework or the Potential Outcomes framework? 
+        Please provide your answer in JSON format with keys 'framework' (either 'graphical' or 'potential_outcomes') 
+        and 'reason' explaining your choice."""
+
+        response = get_gpt_response(prompt)
+        parsed_response = parse_llm_dag_output(response)
+
+        if parsed_response['framework'] == 'graphical':
+            return "gcm", {"reason": parsed_response['reason']}
+
+        elif parsed_response['framework'] == 'potential_outcomes':
+
+            # If Potential Outcomes framework is chosen, use logic to select a specific method
+            n_samples, n_features = data.shape
+            treatment_values = data[treatment].unique()
+            
+            is_binary_treatment = len(treatment_values) == 2
+            is_continuous_outcome = data[outcome].dtype in ['float64', 'float32']
+            has_instrumental_variables = any(len(list(graph.successors(node))) == 1 and list(graph.successors(node))[0] == treatment for node in graph.predecessors(treatment))
+
+            if has_instrumental_variables:
+                return "iv.instrumental_variable", {"reason": "Instrumental variables available in the Potential Outcomes framework"}
     
-    # Check graph characteristics
-    has_unobserved_confounders = any(node.startswith('U') for node in graph.nodes())
-    has_instrumental_variables = any(len(list(graph.successors(node))) == 1 and list(graph.successors(node))[0] == treatment for node in graph.predecessors(treatment))
+            if is_binary_treatment and is_continuous_outcome:
+                if n_samples > 10 * n_features:
+                    return "backdoor.propensity_score_matching", {"reason": "Binary treatment, continuous outcome, and sufficient sample size for propensity score methods"}
+            else:
+                return "backdoor.linear_regression", {"reason": "Binary treatment, continuous outcome, but limited sample size, using simpler method"}
     
-    # Check for complex relationships
-    has_nonlinear_relationships = check_for_nonlinearity(data, treatment, outcome)
-    has_interactions = check_for_interactions(data, treatment, outcome)
-    
-    # Decision logic
-    if has_unobserved_confounders:
-        if has_instrumental_variables:
-            return "iv.instrumental_variable", {"reason": "Unobserved confounders present, but instrumental variables available"}
-        else:
-            return "gcm", {"reason": "Unobserved confounders present, GCM can handle this scenario"}
-    
-    if is_multi_valued_treatment or is_continuous_treatment:
-        return "gcm", {"reason": "GCM can handle multi-valued or continuous treatments"}
-    
-    if has_nonlinear_relationships or has_interactions:
-        return "gcm", {"reason": "GCM can capture complex relationships including nonlinearities and interactions"}
-    
-    if n_edges > 5 and n_features > 10:
-        return "gcm", {"reason": "Complex graph structure and high-dimensional data"}
-    
-    if is_binary_treatment and is_continuous_outcome:
-        if n_samples > 10 * n_features:
-            return "backdoor.propensity_score_matching", {"reason": "Sufficient sample size for propensity score methods"}
-        else:
-            return "backdoor.linear_regression", {"reason": "Limited sample size, using simpler method"}
-    
-    # Default to GCM for other scenarios
-    return "gcm", {"reason": "Default choice for unspecified scenarios"}
+        # Default to propensity score stratification for other scenarios
+        return "backdoor.propensity_score_stratification", {"reason": "Default choice for Potential Outcomes framework in unspecified scenarios"}
 
 def check_for_nonlinearity(data: pd.DataFrame, treatment: str, outcome: str) -> bool:
     """
